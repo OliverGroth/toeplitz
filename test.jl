@@ -30,7 +30,7 @@ function third(n)
     e4 = -4*ones(BigFloat,n-1)
     e6 = 6*ones(BigFloat,n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1) #Banded matrix with BigFloat
-    return A
+    return sparse(A)
 end
 
 function main()
