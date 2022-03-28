@@ -2,6 +2,7 @@ using LinearAlgebra
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
+using Arpack
 
 function matrix(a)
     A=[a 1 2; 2 a 1; 2 1 a]
@@ -9,12 +10,11 @@ function matrix(a)
 end
 
 function first(n)
-    e1 = ones(n-4)
-    e4 = -4*ones(n-3)
+    e1 = ones(n-2)
+    e4 = -4*ones(n-1)
     e6 = 6*ones(n)
     A = spdiagm(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1)
-    println(A)
-    return A
+    return A, eigs(A)
 end
 
 function second(n)
@@ -26,13 +26,11 @@ function second(n)
 end
 
 function third(n)
-    e1 = ones(n-4)
-    e4 = -4*ones(n-3)
+    e1 = ones(n-2)
+    e4 = -4*ones(n-1)
     e6 = 6*ones(n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1)
-    A = sparse(A)
-    println(A)
-    return A
+    return A, eigvals(A)
 end
 
 function main()
