@@ -13,8 +13,8 @@ function first(n)
     e1 = ones(n-2)
     e4 = -4*ones(n-1)
     e6 = 6*ones(n)
-    A = spdiagm(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1)
-    return A, eigs(A)
+    A = spdiagm(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1) #Spase diagonal matrix
+    return A
 end
 
 function second(n)
@@ -26,15 +26,17 @@ function second(n)
 end
 
 function third(n)
-    e1 = ones(n-2)
-    e4 = -4*ones(n-1)
-    e6 = 6*ones(n)
+    e1 = ones(BigFloat,n-2)
+    e4 = -4*ones(BigFloat,n-1)
+    e6 = 6*ones(BigFloat,n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1)
-    return A, eigvals(A)
+    return A
 end
 
 function main()
     A = first(10)
     B = third(10)
-    return A==B
+    display(A)
+    display(B)
+    display(eigs(A))
 end
