@@ -33,6 +33,30 @@ function third(n)
     return sparse(A)
 end
 
+##function toeplitz(vc,vr)
+ #   n = length(vc)
+ #   A = zeros(n,n)
+ #   for i in 0:(n-1)
+ #       for j in 1:(n-i)
+ #       A[i+1,i+1] = vc[j]
+ #   end
+ #   return A
+#end
+
+function toeplitz(col,row)
+# Size of result.
+    m = length(col[:]);  n = length(row[:])
+# Locate the nonzero diagonals.
+    [ic,sc] = find(col[:])
+    row[1] = 0;  # not used
+    [ir,sr] = find(row[:])
+# Use spdiags for construction.
+    d = inverse([ ir-1 1-ic ])
+    B = repeat( [ sr sc ]'.', minimum(m,n),1 )
+    T = spdiags( B,d,m,n )
+    return T
+end
+
 function main()
     A = first(10)
     B = third(10)
