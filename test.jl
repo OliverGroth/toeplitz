@@ -3,11 +3,32 @@ using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
 using Arpack
+using Plots
 
 function matrix(a)
     A=[a 0 2; 2 a 0; 0 1 a]
     display(sparse(A))
 end
+
+function RHS(t,y)
+    return -cos(y)
+end
+
+function odeSolver()
+    k = 0.01
+    T = 10
+    N = convert(Int64,floor(T/k))
+    f = 1
+    y = zeros(N)
+    y[1] = f
+    t = LinRange(0,T,N)
+    for i in range(1,N-1)
+        y[i+1] = y[i] + k*RHS(t[i],y[i])
+    end
+    plot(t,y)
+
+end
+
 
 function spd(n)
     e1 = ones(n-2)
