@@ -5,8 +5,8 @@ using BandedMatrices
 using Arpack
 
 function matrix(a)
-    A=[a 1 2; 2 a 1; 2 1 a]
-    println(A)
+    A=[a 0 2; 2 a 0; 0 1 a]
+    display(sparse(A))
 end
 
 function first(n)
