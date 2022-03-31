@@ -9,7 +9,7 @@ function matrix(a)
     display(sparse(A))
 end
 
-function first(n)
+function spd(n)
     e1 = ones(n-2)
     e4 = -4*ones(n-1)
     e6 = 6*ones(n)
@@ -17,7 +17,7 @@ function first(n)
     return A
 end
 
-function second(n) #Broken
+function tp(n) #Broken
     e = [1,-4,6,-4,1]
     z = zeros(((n-5)/2))
     w = hcat(z,e)
@@ -25,7 +25,7 @@ function second(n) #Broken
     A = Toeplitz(1:n,w)
 end
 
-function third(n)
+function banded(n)
     e1 = ones(BigFloat,n-2)
     e4 = -4*ones(BigFloat,n-1)
     e6 = 6*ones(BigFloat,n)
@@ -33,9 +33,17 @@ function third(n)
     return sparse(A)
 end
 
+function kronTest(n) #Make nxn bi-Laplace with Kronecker product
+    A = Symmetric(-6*I(n) + 
+        4*diagm(1 => ones(n-1)) + 
+        diagm( 2 => ones(n-2)))
+    return sparse(A)
+end
+
+
 function main()
-    A = first(10)
-    B = third(10)
+    A = spd(10)
+    B = banded(10)
     display(A)
     display(B)
     display(eigs(A))
