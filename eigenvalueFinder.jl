@@ -10,35 +10,22 @@ function v(A,m) #Requires nxn matrix A where 1 <= m <= n-1
 	return A[:,m+1]
 end
 
-function f(f,g,v,f,q,y)
+function f(ff,gg,vv,qq,yy,alpha)
+	for j in range(1,alpha):
+		F = append(ff,0) - (gg-vv'*ff*)*yy/qq
 
 end
 
-function g(j,m,G)
-
-end
-
-function w(w,F,H,y)
+function w(ww,F,H,yy)
 
 end
 
 function y(w)
-
+	return append!(w,-1)
 end
 
-
-function q(A,lmb,v,w)
-	
-	q_1 = A[1,1] - lmb
-	N = size(A)[1]
-	Q = zeros(N)
-	Q[1] = q_1
-	for m in range(2,N)
-		q = A[m,m] - lmb - v(A,m-1)
-		Q[m] = q
-	end
-	return Q
-
+function q(a,lmb,vv,ww)
+	return a - lmb + vv'*ww
 end
 
 function main()
