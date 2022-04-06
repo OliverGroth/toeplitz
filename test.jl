@@ -38,5 +38,5 @@ function main()
     B = third(10)
     display(A)
     display(B)
-    display(eigs(A))
+    display(eigvals(Matrix(A)))
 end
