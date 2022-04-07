@@ -59,7 +59,7 @@ function GHFinder(A)
     	end
     end
     println("alpa = ", alpha)
-    return X*D,Y'
+    return X*D,Y',alpha #G,H,alpha
 end
 
 function displacements(A)
@@ -73,6 +73,40 @@ function abFinder(a,b) #(a,b) is starting guess for intervall
 end
 
 function qFinder(A,lmb)
+	n = size(A)[1]
+	GHa = GHFinder(A) #Finds G, H, and alpha
+	Gn = GHa[1]
+	Hn = GHa[2]
+	alpha = GHa[3]
+
+	q1 = A[1,1] - lmb
+	wm = A[1,2]/q1
+	F = zeros(alpha)
+	for j in range(1,alpha)
+		F[j] = Gn[1,j]/q1
+	end
+
+	Q = zeros(n)
+	Q[1] = q1
+	q2 = a[2,2] - lmb - A[1,2]'*wm
+	Q[2] = q2
+	ym = [wm -1]
+
+	for m in range(2,n)
+		Am = A[1:m,1:m]
+		Gm = Gn[1:m,1:m]
+		Hm = Hn[1:m,1:m]
+		vm = A[1:m-1,m]
+		
+
+		q = A[m,m] - lmb .- vm'*wm
+		Q[m] = q
+		ym = y(w)
+		F = Fm(F,Gm,vm',q,y,alpha)
+		wm = w(wm,F,Hm,y)
+	end
+	return Q
+
 
 end
 
