@@ -68,8 +68,28 @@ function displacements(A)
 	return A*Z - Z*A
 end
 
-function abFinder(a,b) #(a,b) is starting guess for intervall
-
+function abFinder(a,b,TOL) #(a,b) is starting guess for intervall
+	# abFinder måste använda qFinder som ska returnera lista {q_1(lambda), ..., {q_m(lambda)}
+	# Vi är nöjda med a och b när:
+	# Neg_n(a) = i - 1 och Neg_n(b) = i
+	# vilket är ekvivalent med 
+	# q_n(a) > 0 och q_n(b) < 0
+	N = 1
+	maxiter = 10^6
+	# a och b ska utifrån startgissningarna tas fram med hjälp av bisektion vilket är en "root finder"-method
+	while N <= maxiter
+		c = (a+b)/q2
+		q_nc = qFinder(A,c)[end]
+		if q_nc == 0 || (b-a)/2 < TOL
+			# solution found
+			return [a, b] # osäker på om [a, b] eller c är mest användbart som return
+		else
+			N += 1
+			if sign(a) == sign(c)
+				a = c
+			else
+				b = c
+	end
 end
 
 function qFinder(A,lmb)

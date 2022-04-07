@@ -60,6 +60,32 @@ function banded(n)
     return sparse(A)
 end
 
+<<<<<<< HEAD
+##function toeplitz(vc,vr)
+ #   n = length(vc)
+ #   A = zeros(n,n)
+ #   for i in 0:(n-1)
+ #       for j in 1:(n-i)
+ #       A[i+1,i+1] = vc[j]
+ #   end
+ #   return A
+#end
+
+function toeplitz(col,row)
+# Size of result.
+    m = length(col[:]);  n = length(row[:])
+# Locate the nonzero diagonals.
+    [ic,sc] = find(col[:])
+    row[1] = 0;  # not used
+    [ir,sr] = find(row[:])
+# Use spdiags for construction.
+    d = inverse([ ir-1 1-ic ])
+    B = repeat( [ sr sc ]'.', minimum(m,n),1 )
+    T = spdiags( B,d,m,n )
+    return T
+end
+
+=======
 function kronTest(n) #Make nxn bi-Laplace with Kronecker product
     A = Symmetric(-6*I(n) + 
         4*diagm(1 => ones(n-1)) + 
@@ -115,6 +141,7 @@ function displacement(n)
 end
 
 
+>>>>>>> 35280c64806d3db12e349c06a8be89923ec544bb
 function main()
     A = spd(10)
     B = banded(10)
