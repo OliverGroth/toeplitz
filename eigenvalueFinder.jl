@@ -72,12 +72,13 @@ function abFinder(a,b) #(a,b) is starting guess for intervall
 
 end
 
-function eigFinder()
+function qFinder(A,lmb)
 
 end
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = banded(n)
+
 
 end
