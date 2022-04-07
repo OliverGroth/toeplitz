@@ -29,6 +29,12 @@ function odeSolver()
 
 end
 
+function spaceTest()
+    x = 1+1
+    y = 1 + 1
+    return x,y
+end
+
 
 function spd(n)
     e1 = ones(n-2)
@@ -47,9 +53,9 @@ function tp(n) #Broken
 end
 
 function banded(n)
-    e1 = ones(BigFloat,n-2)
-    e4 = -4*ones(BigFloat,n-1)
-    e6 = 6*ones(BigFloat,n)
+    e1 = ones(n-2)
+    e4 = -4*ones(n-1)
+    e6 = 6*ones(n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1) #Banded matrix with BigFloat
     return sparse(A)
 end
@@ -59,6 +65,53 @@ function kronTest(n) #Make nxn bi-Laplace with Kronecker product
         4*diagm(1 => ones(n-1)) + 
         diagm( 2 => ones(n-2)))
     return sparse(A)
+end
+
+function decompose_displacement()
+    n=10
+    A=displacement(n)
+
+    # solution from SVD A=X*D*Y
+    S=svd(A)
+    display(S)
+    X=S.U[:,1:2]
+    D=diagm(S.S[1:2])
+    Y=S.Vt[1:2,:]
+
+    # analytical solution A=G*H'
+    G=zeros(n,2)
+    G[1,1]=sqrt(17)
+    G[n-1,2]=-1
+    G[n,2]=4
+    H=zeros(n,2)
+    H[1,1]=-4/sqrt(17)
+    H[2,1]=1/sqrt(17)
+    H[n,2]=1
+
+    display(A)
+    display(X*D)
+    display(Y')
+    display(G)
+    display(H)
+    display(S)
+end
+
+function matrix_fun_shift(n)
+    return diagm(-1=>ones(Int64,n-1))
+end
+
+function matrix_fun_bilaplace(n)
+    vc=[6,-4,1]
+    vr=vc
+    return toeplitz(n,vc,vr)
+end
+
+function displacement(n)
+    An=banded(n)
+    Zn=matrix_fun_shift(n)
+    display(An)
+    display(Zn)
+    return An*Zn-Zn*An
 end
 
 
