@@ -68,28 +68,49 @@ function displacements(A)
 	return A*Z - Z*A
 end
 
-function abFinder(a,b,TOL) #(a,b) is starting guess for intervall
+function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 	# abFinder måste använda qFinder som ska returnera lista {q_1(lambda), ..., {q_m(lambda)}
 	# Vi är nöjda med a och b när:
 	# Neg_n(a) = i - 1 och Neg_n(b) = i
-	# vilket är ekvivalent med 
+	# och
 	# q_n(a) > 0 och q_n(b) < 0
-	N = 1
-	maxiter = 10^6
-	# a och b ska utifrån startgissningarna tas fram med hjälp av bisektion vilket är en "root finder"-method
-	while N <= maxiter
-		c = (a+b)/q2
-		q_nc = qFinder(A,c)[end]
-		if q_nc == 0 || (b-a)/2 < TOL
-			# solution found
-			return [a, b] # osäker på om [a, b] eller c är mest användbart som return
-		else
-			N += 1
-			if sign(a) == sign(c)
-				a = c
+
+	# Vill först kontrollera om Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i vilket är ett krav för
+	# att vi ska kunna hitta våra a och b
+
+	Neg_a = count(x->x<-0,qFinder(A,a))
+	Neg_b = count(x->x<-0,qFinder(A,b))
+	
+	if Neg_a <= (i - 1) && Neg_b ≥ i
+		# Startgissning på a och b OK! Börja iteration
+		N = 1
+		maxiter = 10^6
+		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
+		while N <= maxiter
+			Neg_a = count(x->x<-0,qFinder(A,a))
+			Neg_b = count(x->x<-0,qFinder(A,b))
+			qn_a = qFinder(A,a)[end]
+			qn_b = qFinder(A,b)[end]
+
+			if Neg_a = i-1 && Neg_b = i && qn_a > 0 && qn_b < 0
+				# Solution found
+				return [a, b]
 			else
-				b = c
-	end
+				c = (a+b)/2
+				Neg_c = count(x->x<-0,qFinder(A,c))
+
+				if Neg_c ≤ i-1
+					a = c
+					N += 1
+				elseif Neg_c ≥ i
+					b = c
+					N += 1
+				else
+					println("Unknown error in abFinder.")
+		end
+		println("Too many iterations while trying to find alpha and beta.")
+	else
+		println("Starting guess of alpha and beta does not satisty the conditions.")	
 end
 
 function qFinder(A,lmb)
