@@ -14,6 +14,11 @@ function banded(n) #To create banded matrix
     return sparse(A)
 end
 
+function matrixMaker(n) #Makes non-sparse nxn bi-Laplace
+	return diagm(-2 => ones(n-2), -1 => -4*ones(n-1), 0 => 6*ones(n),
+		1 => -4*ones(n-1), 2 => ones(n-2))
+end 
+
 function v(A,m) #Requires nxn matrix A where 1 <= m <= n-1
 	return A[:,m+1]
 end
@@ -24,17 +29,17 @@ function Fm(ff,G,vv,qq,yy,alpha)
 	F[1,:] = -yy*gg/qq
 	for j in range(2,alpha)
 		gg = last(G[end,j])
-		F[j,:] = F[j-1,:] - yy*(gg-v'*F[j,:])/qq
+		F[j,:] = F[j-1,:] .- yy*(gg.-vv'*F[j,:])/qq
 	end
 	return F
 end
 
 function w(ww,F,H,yy)
-	return append!(0,ww) - F*transpose(H)*yy
+	return [0;ww] .- F*transpose(H)*yy
 end
 
 function y(w)
-	return append!(w,-1)
+	return [w -1]
 end
 
 function q(a,lmb,vv,ww)
@@ -87,12 +92,12 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			Neg_a = count(x->x<-0,qFinder(A,a))
-			Neg_b = count(x->x<-0,qFinder(A,b))
+			Neg_a = count(x->x<=0,qFinder(A,a))
+			Neg_b = count(x->x<=0,qFinder(A,b))
 			qn_a = qFinder(A,a)[end]
 			qn_b = qFinder(A,b)[end]
 
-			if Neg_a = i-1 && Neg_b = i && qn_a > 0 && qn_b < 0
+			if Neg_a == i-1 && Neg_b == i && qn_a > 0 && qn_b < 0
 				# Solution found
 				return [a, b]
 			else
@@ -107,10 +112,13 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 					N += 1
 				else
 					println("Unknown error in abFinder.")
+				end
+			end
 		end
 		println("Too many iterations while trying to find alpha and beta.")
 	else
-		println("Starting guess of alpha and beta does not satisty the conditions.")	
+		println("Starting guess of alpha and beta does not satisty the conditions.")
+	end	
 end
 
 function qFinder(A,lmb)
@@ -126,25 +134,21 @@ function qFinder(A,lmb)
 	for j in range(1,alpha)
 		F[j] = Gn[1,j]/q1
 	end
-
+	println(F)
 	Q = zeros(n)
 	Q[1] = q1
-	q2 = a[2,2] - lmb - A[1,2]'*wm
-	Q[2] = q2
-	ym = [wm -1]
 
 	for m in range(2,n)
 		Am = A[1:m,1:m]
 		Gm = Gn[1:m,1:m]
 		Hm = Hn[1:m,1:m]
-		vm = A[1:m-1,m]
-		
+		vm = A[1:m-1,m][1]
 
 		q = A[m,m] - lmb .- vm'*wm
 		Q[m] = q
-		ym = y(w)
-		F = Fm(F,Gm,vm',q,y,alpha)
-		wm = w(wm,F,Hm,y)
+		ym = y(wm)
+		F = Fm(F,Gm,vm',q,ym,alpha)
+		wm = w(wm,F,Hm,ym)
 	end
 	return Q
 
