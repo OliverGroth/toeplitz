@@ -62,6 +62,7 @@ end
 
 function y(Ww)
 	# Uses Ww (w_{m-1} (a vector) to create y_m (a vector))
+	return [Ww;-1]
 end
 
 function F(F_old,G,Vv,qq,Yy)
@@ -74,6 +75,7 @@ end
 function w(Ww_old,FF,H,Yy)
 	# Uses Ww_old (vector w_{m-1}), FF (m x alpha matrix F),
 	# H (m x alpha matrix H_m) and Yy (vector y_m)
+	return [0;Ww_old] - FF*transpose(H)*Yy
 end
 
 
@@ -128,6 +130,11 @@ end
 function qFinder(A,lmb)
 	# Finds vector of q_1(lmb),...,q_n(lmb) for a Hermitian 
 	# nxn Toeplitz matrix A 
+	n = size(A)[1]
+	Q = zeros(n)
+	Q[1] = A[1,1] - lmb
+	Wwm = A[1,2]/Q[1]
+	
 
 
 function main(n)
