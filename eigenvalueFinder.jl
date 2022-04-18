@@ -29,7 +29,9 @@ function Fm(ff,G,vv,qq,yy,alpha)
 	F[1,:] = -yy*gg/qq
 	for j in range(2,alpha)
 		gg = last(G[end,j])
-		F[j,:] = F[j-1,:] .- yy*(gg.-vv'*F[j,:])/qq
+		display(vv')
+		display(ff[j-1,:])
+		F[j,:] = [ff[j-1,:];0] .- yy.*(gg-vv'*ff[j-1,:])/qq
 	end
 	return F
 end
