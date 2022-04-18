@@ -6,6 +6,11 @@ using Arpack
 using Plots
 using Roots
 
+# Only one or two big letters indicate matrix
+# one big one small indicates vector
+# one/two small scalar (or small name (like lmb))
+# Function names are one letter to avoid confusion with variables
+
 function banded(n) #To create banded matrix
     e1 = ones(n-2)
     e4 = -4*ones(n-1)
@@ -19,34 +24,6 @@ function matrixMaker(n) #Makes non-sparse nxn bi-Laplace
 		1 => -4*ones(n-1), 2 => ones(n-2))
 end 
 
-function v(A,m) #Requires nxn matrix A where 1 <= m <= n-1
-	return A[:,m+1]
-end
-
-function Fm(ff,G,vv,qq,yy,alpha)
-	F = zeros(size(ff)[1]+1,alpha)
-	gg = last(G[:,1])
-	F[1,:] = -yy*gg/qq
-	for j in range(2,alpha)
-		gg = last(G[end,j])
-		display(vv')
-		display(ff[j-1,:])
-		F[j,:] = [ff[j-1,:];0] .- yy.*(gg-vv'*ff[j-1,:])/qq
-	end
-	return F
-end
-
-function w(ww,F,H,yy)
-	return [0;ww] .- F*transpose(H)*yy
-end
-
-function y(w)
-	return [w;-1]
-end
-
-function q(a,lmb,vv,ww)
-	return a - lmb + vv'*ww
-end
 
 function GHFinder(A)
 	B = displacements(A)
@@ -74,6 +51,31 @@ function displacements(A)
 	Z = diagm(-1 => ones(n-1))
 	return A*Z - Z*A
 end
+
+function q(a,lmb,Vv,Ww)
+	# Uses values a(=A[m,m]) and lmb (lambda) aswell as
+	# vectors vv and ww (v_{m-1} and w_{m-1}) to create
+	# q_m (a value) 
+
+	return a - lmb - Vv'*Ww
+end
+
+function y(Ww)
+	# Uses Ww (w_{m-1} (a vector) to create y_m (a vector))
+end
+
+function F(F_old,G,Vv,qq,Yy)
+	# Uses F_old ((m-1) x alpha matrix), G ((m-1) x alpha matrix
+	# to extract g_{mj} as 
+	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
+	# and yy (vector y_m)
+end
+
+function w(Ww_old,FF,H,Yy)
+	# Uses Ww_old (vector w_{m-1}), FF (m x alpha matrix F),
+	# H (m x alpha matrix H_m) and Yy (vector y_m)
+end
+
 
 function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 	# abFinder måste använda qFinder som ska returnera lista {q_1(lambda), ..., {q_m(lambda)}
@@ -124,44 +126,11 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 end
 
 function qFinder(A,lmb)
-	n = size(A)[1]
-	GHa = GHFinder(A) #Finds G, H, and alpha
-	Gn = GHa[1]
-	Hn = GHa[2]
-	alpha = GHa[3]
+	# Finds vector of q_1(lmb),...,q_n(lmb) for a Hermitian 
+	# nxn Toeplitz matrix A 
 
-	q1 = A[1,1] - lmb
-	wm = A[1,2]/q1
-	F = zeros(alpha)
-	for j in range(1,alpha)
-		F[j] = Gn[1,j]/q1
-	end
-	println(F)
-	Q = zeros(n)
-	Q[1] = q1
-
-	unit = I
-
-	for m in range(2,n)
-		Am = A[1:m,1:m]
-		Gm = Gn[1:m,:]
-		Hm = Hn[1:m,:]
-		vm = A[1:m-1,m][1]
-
-		q = A[m,m] - lmb .- vm'*wm
-		Q[m] = q
-		ym = y(wm)
-		F = Fm(F,Gm,vm',q,ym,alpha)
-		wm = w(wm,F,Hm,ym)
-	end
-	return Q
-
-
-end
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = matrixMaker(n)
-
-
 end
