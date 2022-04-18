@@ -138,10 +138,12 @@ function qFinder(A,lmb)
 	Q = zeros(n)
 	Q[1] = q1
 
+	unit = I
+
 	for m in range(2,n)
 		Am = A[1:m,1:m]
-		Gm = Gn[1:m,1:m]
-		Hm = Hn[1:m,1:m]
+		Gm = Gn[1:m,:]
+		Hm = Hn[1:m,:]
 		vm = A[1:m-1,m][1]
 
 		q = A[m,m] - lmb .- vm'*wm
