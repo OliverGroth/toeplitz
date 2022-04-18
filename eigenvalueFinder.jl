@@ -39,7 +39,7 @@ function w(ww,F,H,yy)
 end
 
 function y(w)
-	return [w -1]
+	return [w;-1]
 end
 
 function q(a,lmb,vv,ww)
@@ -159,7 +159,7 @@ end
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
-	A = banded(n)
+	A = matrixMaker(n)
 
 
 end
