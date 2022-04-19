@@ -65,11 +65,21 @@ function y(Ww)
 	return [Ww;-1]
 end
 
-function F(F_old,G,Vv,qq,Yy)
+function F(F_old,G,vv,qq,yy)
 	# Uses F_old ((m-1) x alpha matrix), G ((m-1) x alpha matrix
 	# to extract g_{mj} as 
 	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
 	# and yy (vector y_m)
+	
+	m = (size(F_old)[1]+1)
+	alpha = size(F_old)[2]
+	Fm = zeros(m,alpha)
+	gg = G[end,1]
+	F[1,:] = -gg*yy/qq
+	for j in range(2,alpha)
+		gg = G[end,j]
+		FF[j,:] = [F_old;0] - yy*(gg - (vv'*F_old))/qq
+
 end
 
 function w(Ww_old,FF,H,Yy)
