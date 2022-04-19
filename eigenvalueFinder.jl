@@ -139,11 +139,44 @@ end
 
 function qFinder(A,lmb)
 	# Finds vector of q_1(lmb),...,q_n(lmb) for a Hermitian 
-	# nxn Toeplitz matrix A 
-	n = size(A)[1]
-	Q = zeros(n)
-	Q[1] = A[1,1] - lmb
-	Wwm = A[1,2]/Q[1]
+	# nxn Toeplitz matrix A
+
+	n = size(A)[]
+	
+	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
+	q_1 = A[1,1] - lmb
+	w_1 = A[1,2] / q_1
+	v_1 = A[1,2]
+
+	f_1 = zeros(alpha)
+	for j in range(1,alpha)
+		f_1[j] = G[1,j] / q_1
+	end
+
+	qvector = zeros(n)
+	qvector[1] = q_1
+
+	v_prev = v_1
+	w_prev = w_1
+	f_prev = f_1
+
+	for m in range(2,n)
+		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
+		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
+		H_m = H[1:m,:]
+
+		v_m = A[:,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
+
+		qvector[m] = q(A,lmb,Vv,Ww) # Vv = V_{m-1}, Ww = W_{m-1}
+		y_m = y(w_prev)
+		f_m = F(f_prev,G_m,v_prev,qvector[m],y_m)
+		w_m = w(w_prev, fvector, H_m)
+
+		w_prev = w_m
+		v_prev = v_m
+		f_prev = f_m
+	end
+end
 	
 
 
