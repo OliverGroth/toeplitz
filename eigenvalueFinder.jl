@@ -56,7 +56,10 @@ function q(a,lmb,Vv,Ww)
 	# Uses values a(=A[m,m]) and lmb (lambda) aswell as
 	# vectors vv and ww (v_{m-1} and w_{m-1}) to create
 	# q_m (a value) 
-
+	display(a)
+	display(lmb)
+	display(Vv')
+	display(Ww)
 	return a - lmb - Vv'*Ww
 end
 
@@ -70,16 +73,25 @@ function F(F_old,G,vv,qq,yy)
 	# to extract g_{mj} as 
 	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
 	# and yy (vector y_m)
-	
 	m = (size(F_old)[1]+1)
 	alpha = size(F_old)[2]
 	Fm = zeros(m,alpha)
 	gg = G[end,1]
-	F[1,:] = -gg*yy/qq
+	display(yy)
+	display(m)
+	Fm[:,1] = -gg*yy/qq
 	for j in range(2,alpha)
 		gg = G[end,j]
-		FF[j,:] = [F_old;0] - yy*(gg - (vv'*F_old))/qq
+		display([F_old[:,j];0])
+		display(vv'*F_old[:,j])
+		display(m)
+		if m-1 == 1
+			Fm[:,j] = [F_old[:,j];0] - yy*(gg - ((vv'*F_old[:,j])[1]))/qq
+		else
+			Fm[:,j] = [F_old[:,j];0] - yy*(gg - (vv'*F_old[:,j]))/qq
+		end
 	end
+	return Fm
 end
 
 function w(Ww_old,FF,H,Yy)
@@ -148,10 +160,11 @@ function qFinder(A,lmb)
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
 
-	f_1 = zeros(alpha)
+	f_1 = zeros(1,alpha)
 	for j in range(1,alpha)
-		f_1[j] = G[1,j] / q_1
+		f_1[1,j] = G[1,j] / q_1
 	end
+	display(f_1)
 
 	qvector = zeros(n)
 	qvector[1] = q_1
@@ -165,17 +178,21 @@ function qFinder(A,lmb)
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
 		H_m = H[1:m,:]
 
-		v_m = A[:,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
-
-		qvector[m] = q(A,lmb,Vv,Ww) # Vv = V_{m-1}, Ww = W_{m-1}
+		if m != n
+			v_m = A[1:m,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
+		end
+		qvector[m] = q(A[m,m],lmb,v_prev,w_prev) # Vv = V_{m-1}, Ww = W_{m-1}
 		y_m = y(w_prev)
 		f_m = F(f_prev,G_m,v_prev,qvector[m],y_m)
-		w_m = w(w_prev, fvector, H_m)
+		w_m = w(w_prev, f_m, H_m, y_m)
 
 		w_prev = w_m
-		v_prev = v_m
+		if m != n
+			v_prev = v_m
+		end
 		f_prev = f_m
 	end
+	return qvector
 end
 	
 
