@@ -156,6 +156,7 @@ function qFinder(A,lmb)
 	n = size(A)[1]
 	
 	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
+	
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
