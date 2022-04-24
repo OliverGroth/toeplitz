@@ -77,7 +77,7 @@ function Fbroke(F_old,G,vv,qq,yy)
 		display(vv'*F_old[:,j])
 		display(m)
 		if m-1 == 1
-			Fm[:,j] = [F_old[:,j];0] - yy*(gg - ((vv'*F_old[:,j])[1]))/qq
+			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
 			println("F_old: ", F_old[:,j])
 			println("yy: ",yy)
 			println("gg: ",gg)
@@ -85,7 +85,7 @@ function Fbroke(F_old,G,vv,qq,yy)
 			println("qq: ",qq)
 			println("F_m: ",Fm[:,j])
 		else
-			Fm[:,j] = [F_old[:,j];0] - yy*(gg - (vv'*F_old[:,j]))/qq
+			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
 			println("F_old: ", F_old[:,j])
 			println("yy: ",yy)
 			println("gg: ",gg)
@@ -109,9 +109,9 @@ function F(F_old,G,vv,qq,yy)
 	display(yy)
 	display(m)
 	if m-1 == 1
-		Fm[:,1] = [F_old[:,end];0] - yy*(gg-(vv'*F_old[:,end])[1])/qq
+		Fm[:,1] = [F_old[:,1];0] - yy*(gg-(vv'*F_old[:,1])[1])/qq
 	else
-		Fm[:,1] = [F_old[:,end];0] - yy*(gg-vv'*F_old[:,end])/qq
+		Fm[:,1] = [F_old[:,1];0] - yy*(gg-vv'*F_old[:,1])/qq
 	end
 
 	for j in range(2,alpha)
