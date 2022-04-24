@@ -1,12 +1,3 @@
-using LinearAlgebra
-using SparseArrays
-using ToeplitzMatrices
-using BandedMatrices
-using Arpack
-using Plots
-using Roots
-
-# Only one or two big letters indicate matrix
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
@@ -42,7 +33,7 @@ function GHFinder(A)
     		alpha += 1
     	end
     end
-    println("alpa = ", alpha)
+    println("alpha = ", alpha)
     return X*D,Y',alpha #G,H,alpha
 end
 
@@ -68,12 +59,12 @@ function y(Ww)
 	return [Ww;-1]
 end
 
-function F(F_old,G,vv,qq,yy)
+function Fbroke(F_old,G,vv,qq,yy)
 	# Uses F_old ((m-1) x alpha matrix), G ((m-1) x alpha matrix
 	# to extract g_{mj} as 
 	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
 	# and yy (vector y_m)
-	m = (size(F_old)[1]+1)
+	m = (size(F_old)[1]+1) 
 	alpha = size(F_old)[2]
 	Fm = zeros(m,alpha)
 	gg = G[end,1]
@@ -87,8 +78,65 @@ function F(F_old,G,vv,qq,yy)
 		display(m)
 		if m-1 == 1
 			Fm[:,j] = [F_old[:,j];0] - yy*(gg - ((vv'*F_old[:,j])[1]))/qq
+			println("F_old: ", F_old[:,j])
+			println("yy: ",yy)
+			println("gg: ",gg)
+			println("vv:" ,vv)
+			println("qq: ",qq)
+			println("F_m: ",Fm[:,j])
 		else
 			Fm[:,j] = [F_old[:,j];0] - yy*(gg - (vv'*F_old[:,j]))/qq
+			println("F_old: ", F_old[:,j])
+			println("yy: ",yy)
+			println("gg: ",gg)
+			println("vv:" ,vv)
+			println("qq: ",qq)
+			println("F_m: ",Fm[:,j])
+		end
+	end
+	return Fm
+end
+
+function F(F_old,G,vv,qq,yy)
+	# Uses F_old ((m-1) x alpha matrix), G ((m-1) x alpha matrix
+	# to extract g_{mj} as 
+	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
+	# and yy (vector y_m)
+	m = (size(F_old)[1]+1) 
+	alpha = size(F_old)[2]
+	Fm = zeros(m,alpha)
+	gg = G[end,1]
+	display(yy)
+	display(m)
+	if m-1 == 1
+		Fm[:,1] = [F_old[:,end];0] - yy*(gg-(vv'*F_old[:,end])[1])/qq
+	else
+		Fm[:,1] = [F_old[:,end];0] - yy*(gg-vv'*F_old[:,end])/qq
+	end
+
+	for j in range(2,alpha)
+		gg = G[end,j]
+		display([F_old[:,j];0])
+		display(vv'*F_old[:,j])
+		display(m)
+
+
+		if m-1 == 1
+			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
+			println("F_old: ", F_old[:,j])
+			println("yy: ",yy)
+			println("gg: ",gg)
+			println("vv:" ,vv)
+			println("qq: ",qq)
+			println("F_m: ",Fm[:,j])
+		else
+			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
+			println("F_old: ", F_old[:,j])
+			println("yy: ",yy)
+			println("gg: ",gg)
+			println("vv:" ,vv)
+			println("qq: ",qq)
+			println("F_m: ",Fm[:,j])
 		end
 	end
 	return Fm
@@ -97,6 +145,15 @@ end
 function w(Ww_old,FF,H,Yy)
 	# Uses Ww_old (vector w_{m-1}), FF (m x alpha matrix F),
 	# H (m x alpha matrix H_m) and Yy (vector y_m)
+	println("FF*transpose(H)*Yy:")
+	display(FF*transpose(H)*Yy)
+	println("FF:")
+	display(FF)
+	println("transpose(H):")
+	display(transpose(H))
+	println("Yy")
+	display(Yy)
+
 	return [0;Ww_old] - FF*transpose(H)*Yy
 end
 
@@ -156,7 +213,6 @@ function qFinder(A,lmb)
 	n = size(A)[1]
 	
 	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
-	
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
@@ -168,7 +224,7 @@ function qFinder(A,lmb)
 	display(f_1)
 
 	qvector = zeros(n)
-	qvector[1] = q_1
+	qvector[1] = q_1 
 
 	v_prev = v_1
 	w_prev = w_1
@@ -179,6 +235,7 @@ function qFinder(A,lmb)
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
 		H_m = H[1:m,:]
 
+
 		if m != n
 			v_m = A[1:m,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
 		end
@@ -186,6 +243,16 @@ function qFinder(A,lmb)
 		y_m = y(w_prev)
 		f_m = F(f_prev,G_m,v_prev,qvector[m],y_m)
 		w_m = w(w_prev, f_m, H_m, y_m)
+
+		#println("Iteration number: ",  m)
+		#println("a: ", A[m,m])
+		#println("lambda: ", lmb)
+	#	println("vwskiten: ", v_prev'*w_prev)
+		#println("result: ", qvector[m])
+	#	println("v_prev:")
+	#	display(v_prev)
+		println("w_prev:")
+		display(w_prev)
 
 		w_prev = w_m
 		if m != n
@@ -195,11 +262,9 @@ function qFinder(A,lmb)
 	end
 	return qvector
 end
-	
-
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = matrixMaker(n)
-	display(qFinder(A,10))
+	display(qFinder(A,eigmax(A)))
 end
