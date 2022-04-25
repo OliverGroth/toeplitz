@@ -29,11 +29,11 @@ function GHFinder(A)
     alpha = 0
     for s in S.S
     	if s > 10^(-6)
-    		display(s)
+    		#display(s)
     		alpha += 1
     	end
     end
-    println("alpha = ", alpha)
+    #println("alpha = ", alpha)
     return X*D,Y',alpha #G,H,alpha
 end
 
@@ -47,10 +47,10 @@ function q(a,lmb,Vv,Ww)
 	# Uses values a(=A[m,m]) and lmb (lambda) aswell as
 	# vectors vv and ww (v_{m-1} and w_{m-1}) to create
 	# q_m (a value) 
-	display(a)
-	display(lmb)
-	display(Vv')
-	display(Ww)
+	#display(a)
+	#display(lmb)
+	#display(Vv')
+	#display(Ww)
 	return a - lmb - Vv'*Ww
 end
 
@@ -78,20 +78,20 @@ function Fbroke(F_old,G,vv,qq,yy)
 		display(m)
 		if m-1 == 1
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
-			println("F_old: ", F_old[:,j])
-			println("yy: ",yy)
-			println("gg: ",gg)
-			println("vv:" ,vv)
-			println("qq: ",qq)
-			println("F_m: ",Fm[:,j])
+			#println("F_old: ", F_old[:,j])
+			#println("yy: ",yy)
+			#println("gg: ",gg)
+			#println("vv:" ,vv)
+			#println("qq: ",qq)
+			#println("F_m: ",Fm[:,j])
 		else
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
-			println("F_old: ", F_old[:,j])
-			println("yy: ",yy)
-			println("gg: ",gg)
-			println("vv:" ,vv)
-			println("qq: ",qq)
-			println("F_m: ",Fm[:,j])
+			#println("F_old: ", F_old[:,j])
+			#println("yy: ",yy)
+			#println("gg: ",gg)
+			#println("vv:" ,vv)
+			#println("qq: ",qq)
+			#println("F_m: ",Fm[:,j])
 		end
 	end
 	return Fm
@@ -106,8 +106,8 @@ function F(F_old,G,vv,qq,yy)
 	alpha = size(F_old)[2]
 	Fm = zeros(m,alpha)
 	gg = G[end,1]
-	display(yy)
-	display(m)
+	#display(yy)
+	#display(m)
 	if m-1 == 1
 		Fm[:,1] = [F_old[:,1];0] - yy*(gg-(vv'*F_old[:,1])[1])/qq
 	else
@@ -116,27 +116,27 @@ function F(F_old,G,vv,qq,yy)
 
 	for j in range(2,alpha)
 		gg = G[end,j]
-		display([F_old[:,j];0])
-		display(vv'*F_old[:,j])
-		display(m)
+		#display([F_old[:,j];0])
+		#display(vv'*F_old[:,j])
+		#display(m)
 
 
 		if m-1 == 1
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
-			println("F_old: ", F_old[:,j])
-			println("yy: ",yy)
-			println("gg: ",gg)
-			println("vv:" ,vv)
-			println("qq: ",qq)
-			println("F_m: ",Fm[:,j])
+			#println("F_old: ", F_old[:,j])
+			#println("yy: ",yy)
+			#println("gg: ",gg)
+			#println("vv:" ,vv)
+			#println("qq: ",qq)
+			#println("F_m: ",Fm[:,j])
 		else
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
-			println("F_old: ", F_old[:,j])
-			println("yy: ",yy)
-			println("gg: ",gg)
-			println("vv:" ,vv)
-			println("qq: ",qq)
-			println("F_m: ",Fm[:,j])
+			#println("F_old: ", F_old[:,j])
+			#println("yy: ",yy)
+			#println("gg: ",gg)
+			#println("vv:" ,vv)
+			#println("qq: ",qq)
+			#println("F_m: ",Fm[:,j])
 		end
 	end
 	return Fm
@@ -145,14 +145,14 @@ end
 function w(Ww_old,FF,H,Yy)
 	# Uses Ww_old (vector w_{m-1}), FF (m x alpha matrix F),
 	# H (m x alpha matrix H_m) and Yy (vector y_m)
-	println("FF*transpose(H)*Yy:")
-	display(FF*transpose(H)*Yy)
-	println("FF:")
-	display(FF)
-	println("transpose(H):")
-	display(transpose(H))
-	println("Yy")
-	display(Yy)
+	#println("FF*transpose(H)*Yy:")
+	#display(FF*transpose(H)*Yy)
+	#println("FF:")
+	#display(FF)
+	#println("transpose(H):")
+	#display(transpose(H))
+	#println("Yy")
+	#display(Yy)
 
 	return [0;Ww_old] - FF*transpose(H)*Yy
 end
@@ -202,7 +202,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		end
 		println("Too many iterations while trying to find alpha and beta.")
 	else
-		println("Starting guess of alpha and beta does not satisty the conditions.")
+		println("Starting guess of alpha and beta does not satisfy the conditions.")
 	end	
 end
 
@@ -221,7 +221,7 @@ function qFinder(A,lmb)
 	for j in range(1,alpha)
 		f_1[1,j] = G[1,j] / q_1
 	end
-	display(f_1)
+	#display(f_1)
 
 	qvector = zeros(n)
 	qvector[1] = q_1 
@@ -251,8 +251,8 @@ function qFinder(A,lmb)
 		#println("result: ", qvector[m])
 	#	println("v_prev:")
 	#	display(v_prev)
-		println("w_prev:")
-		display(w_prev)
+		#println("w_prev:")
+		#display(w_prev)
 
 		w_prev = w_m
 		if m != n
@@ -266,5 +266,9 @@ end
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = matrixMaker(n)
-	display(qFinder(A,eigmax(A)))
+	a = eigmin(A)
+	b = eigmax(A)
+	for i in range(1,n)
+		display(abFinder(a,b,i,A))
+	end
 end
