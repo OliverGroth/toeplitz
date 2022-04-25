@@ -1,3 +1,10 @@
+using LinearAlgebra
+using SparseArrays
+using ToeplitzMatrices
+using BandedMatrices
+using Arpack
+using Plots
+using Roots
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
@@ -177,10 +184,12 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			Neg_a = count(x->x<=0,qFinder(A,a))
-			Neg_b = count(x->x<=0,qFinder(A,b))
-			qn_a = qFinder(A,a)[end]
-			qn_b = qFinder(A,b)[end]
+			q_a = qFinder(A,a)
+			q_b = qFinder(A,b)
+			Neg_a = count(x->x<=0,q_a)
+			Neg_b = count(x->x<=0,q_b)
+			qn_a = q_a[end]
+			qn_b = q_b[end]
 
 			if Neg_a == i-1 && Neg_b == i && qn_a > 0 && qn_b < 0
 				# Solution found
@@ -268,7 +277,13 @@ function main(n)
 	A = matrixMaker(n)
 	a = eigmin(A)
 	b = eigmax(A)
+	B = banded(n)
+	X = zeros(2,n)
+	E = zeros(n)
 	for i in range(1,n)
-		display(abFinder(a,b,i,A))
+		#X[:,i] = abFinder(a-1,b+1,i,A)
+		x = abFinder(a-1,b+1,i,A)
+		E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]), Bisection())
 	end
+	return E
 end
