@@ -272,6 +272,38 @@ function qFinder(A,lmb)
 	return qvector
 end
 
+function eigFinder(A,I = 0)
+	a = eigmin(A) - 1
+	b = eigmax(A) + 1
+	if I == 0
+		N = size(A)[1]
+		E = zeros(N)
+		for i in range(1,N)
+			x = abFinder(a,b,i,A)
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+		end
+	elseif typeof(I) == Tuple{Int64,Int64}
+		N = I[2] - I[1] + 1
+		E = zeros(N)
+		k = I[1]
+		for i in range(1,N)
+			x = abFinder(a,b,k,A)
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+			k += 1
+		end
+	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64}
+		N = length(I)
+		E = zeros(N)
+		for i in range(1,N)
+			x = abFinder(a,b,I[i],A)
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+		end
+	else 
+		println("Illegal eigenvalue!")
+	end
+	return E
+end
+
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = matrixMaker(n)
