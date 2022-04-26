@@ -291,7 +291,10 @@ function eigFinder(A,I = 0)
 		for i in range(1,N)
 			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
 			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
-		end 
+		end
+	elseif typeof(I) == Float64 || typeof(I) == Int64
+		x = abFinder(a,b,I,A)
+		E = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection()) 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
 		E = zeros(N)
@@ -310,6 +313,7 @@ function eigFinder(A,I = 0)
 		end
 	else 
 		println("Illegal eigenvalue!")
+		return 
 	end
 	return E
 end
