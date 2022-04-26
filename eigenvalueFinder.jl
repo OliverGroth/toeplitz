@@ -273,27 +273,37 @@ function qFinder(A,lmb)
 end
 
 function eigFinder(A,I = 0)
-	a = eigmin(A) - 1
-	b = eigmax(A) + 1
+	# An eigenvalue finder using algorithm 2.3 combined with bisection to find 
+	# interval (alpha,beta) (abFinder). It then uses bisection on this interval 
+	# to find the eigenvalue.
+	# Takes a matrix and three types of values for I,
+	# No value: calculates all eigenvalues
+	# I is tuple: calculates values between I[1] and I[2]
+	# I is vector: calculates the values specified in vectors
+	# The algorithm calculates the ith smallest eigenvalue, thus I specifies
+	# which eigenvalue by index that is calculated.
+
+	a = eigmin(A) - 1  	# Starting guesses for interval that can be improved as to
+	b = eigmax(A) + 1  	# not use built in eigenvalue finder
 	if I == 0
-		N = size(A)[1]
-		E = zeros(N)
+		N = size(A)[1] 	# How many eigenvalues we look for. Here we assume that
+		E = zeros(N) 	# there are n eigenvalue for an nxn matrix (multiplicites?) 
 		for i in range(1,N)
-			x = abFinder(a,b,i,A)
+			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
 			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
-		end
+		end 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
 		E = zeros(N)
-		k = I[1]
+		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
 			x = abFinder(a,b,k,A)
 			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
 			k += 1
 		end
-	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64}
-		N = length(I)
-		E = zeros(N)
+	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64} 	# We also allow
+		N = length(I)													# a range like
+		E = zeros(N)													# a:b
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
 			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
