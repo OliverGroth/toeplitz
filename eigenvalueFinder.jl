@@ -5,6 +5,8 @@ using BandedMatrices
 using Arpack
 using Plots
 using Roots
+using BenchmarkTools
+using Profile
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
@@ -14,7 +16,7 @@ function banded(n) #To create banded matrix
     e4 = -4*ones(n-1)
     e6 = 6*ones(n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1) #Banded matrix with BigFloat
-    return sparse(A)
+    return A
 end
 
 function matrixMaker(n) #Makes non-sparse nxn bi-Laplace
@@ -29,18 +31,12 @@ function GHFinder(A)
 	X=S.U[:,1:2]
     D=diagm(S.S[1:2])
     Y=S.Vt[1:2,:]
-
-    #display(X*D)
-    #display(Y')
-    #display(S.S)
     alpha = 0
     for s in S.S
     	if s > 10^(-6)
-    		#display(s)
     		alpha += 1
     	end
     end
-    #println("alpha = ", alpha)
     return X*D,Y',alpha #G,H,alpha
 end
 
@@ -54,10 +50,6 @@ function q(a,lmb,Vv,Ww)
 	# Uses values a(=A[m,m]) and lmb (lambda) aswell as
 	# vectors vv and ww (v_{m-1} and w_{m-1}) to create
 	# q_m (a value) 
-	#display(a)
-	#display(lmb)
-	#display(Vv')
-	#display(Ww)
 	return a - lmb - Vv'*Ww
 end
 
@@ -85,20 +77,8 @@ function Fbroke(F_old,G,vv,qq,yy)
 		display(m)
 		if m-1 == 1
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
-			#println("F_old: ", F_old[:,j])
-			#println("yy: ",yy)
-			#println("gg: ",gg)
-			#println("vv:" ,vv)
-			#println("qq: ",qq)
-			#println("F_m: ",Fm[:,j])
 		else
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
-			#println("F_old: ", F_old[:,j])
-			#println("yy: ",yy)
-			#println("gg: ",gg)
-			#println("vv:" ,vv)
-			#println("qq: ",qq)
-			#println("F_m: ",Fm[:,j])
 		end
 	end
 	return Fm
@@ -113,8 +93,6 @@ function F(F_old,G,vv,qq,yy)
 	alpha = size(F_old)[2]
 	Fm = zeros(m,alpha)
 	gg = G[end,1]
-	#display(yy)
-	#display(m)
 	if m-1 == 1
 		Fm[:,1] = [F_old[:,1];0] - yy*(gg-(vv'*F_old[:,1])[1])/qq
 	else
@@ -123,27 +101,11 @@ function F(F_old,G,vv,qq,yy)
 
 	for j in range(2,alpha)
 		gg = G[end,j]
-		#display([F_old[:,j];0])
-		#display(vv'*F_old[:,j])
-		#display(m)
-
 
 		if m-1 == 1
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
-			#println("F_old: ", F_old[:,j])
-			#println("yy: ",yy)
-			#println("gg: ",gg)
-			#println("vv:" ,vv)
-			#println("qq: ",qq)
-			#println("F_m: ",Fm[:,j])
 		else
 			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
-			#println("F_old: ", F_old[:,j])
-			#println("yy: ",yy)
-			#println("gg: ",gg)
-			#println("vv:" ,vv)
-			#println("qq: ",qq)
-			#println("F_m: ",Fm[:,j])
 		end
 	end
 	return Fm
@@ -253,23 +215,13 @@ function qFinder(A,lmb)
 		f_m = F(f_prev,G_m,v_prev,qvector[m],y_m)
 		w_m = w(w_prev, f_m, H_m, y_m)
 
-		#println("Iteration number: ",  m)
-		#println("a: ", A[m,m])
-		#println("lambda: ", lmb)
-	#	println("vwskiten: ", v_prev'*w_prev)
-		#println("result: ", qvector[m])
-	#	println("v_prev:")
-	#	display(v_prev)
-		#println("w_prev:")
-		#display(w_prev)
-
 		w_prev = w_m
 		if m != n
 			v_prev = v_m
 		end
 		f_prev = f_m
 	end
-	return qvector
+	return qvector# Why can't return y_m
 end
 
 function eigFinder(A,I = 0)
@@ -283,25 +235,27 @@ function eigFinder(A,I = 0)
 	# The algorithm calculates the ith smallest eigenvalue, thus I specifies
 	# which eigenvalue by index that is calculated.
 
-	a = eigmin(A) - 1  	# Starting guesses for interval that can be improved as to
-	b = eigmax(A) + 1  	# not use built in eigenvalue finder
+	#a = eigmin(A) - 1  	# Starting guesses for interval that can be improved as to
+	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
+	a = -1 # Specific for Bi-Laplace
+	b = 17 # Specific for Bi-Laplace
 	if I == 0
 		N = size(A)[1] 	# How many eigenvalues we look for. Here we assume that
 		E = zeros(N) 	# there are n eigenvalue for an nxn matrix (multiplicites?) 
 		for i in range(1,N)
 			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
 		x = abFinder(a,b,I,A)
-		E = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection()) 
+		E = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2])) 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
 		E = zeros(N)
 		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
 			x = abFinder(a,b,k,A)
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
 			k += 1
 		end
 	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64} 	# We also allow
@@ -309,7 +263,7 @@ function eigFinder(A,I = 0)
 		E = zeros(N)													# a:b
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]),Bisection())
+			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
 		end
 	else 
 		println("Illegal eigenvalue!")
@@ -333,3 +287,7 @@ function main(n)
 	end
 	return E
 end
+
+
+
+
