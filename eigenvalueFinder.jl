@@ -1,4 +1,5 @@
 using LinearAlgebra
+using GenericLinearAlgebra
 using GenericSVD
 using SparseArrays
 using ToeplitzMatrices
@@ -12,7 +13,7 @@ using Profile
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
 
-function banded(n) #To create banded matrix
+function banded(n,T=Float64) #To create banded matrix
     e1 = ones(n-2)
     e4 = -4*ones(n-1)
     e6 = 6*ones(n)
@@ -26,10 +27,8 @@ function matrixMaker(n,T=Float64) #Makes non-sparse nxn bi-Laplace
 end
 
 
-function GHFinder(A,T=Float64)
-	display("test1")
-	B = displacements(A,T)
-	display("test2")
+function GHFinder(A)
+	B = displacements(A)
 	S = svd(B)
 	X=S.U[:,1:2]
     D=diagm(S.S[1:2])
@@ -40,11 +39,11 @@ function GHFinder(A,T=Float64)
     		alpha += 1
     	end
     end
-    display(T)
     return X*D,Y',alpha #G,H,alpha
 end
 
-function displacements(A,T=Float64)
+function displacements(A)
+	T = eltype(A)
 	n = size(A)[1]
 	Z = diagm(-1 => ones(T,n-1))
 	return A*Z - Z*A
@@ -105,7 +104,7 @@ function w(Ww_old,FF,H,Yy)
 end
 
 
-function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
+function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 	# abFinder måste använda qFinder som ska returnera lista {q_1(lambda), ..., {q_m(lambda)}
 	# Vi är nöjda med a och b när:
 	# Neg_n(a) = i - 1 och Neg_n(b) = i
@@ -114,9 +113,12 @@ function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
 
 	# Vill först kontrollera om Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i vilket är ett krav för
 	# att vi ska kunna hitta våra a och b
+	T = eltype(A)
+	display(T)
 
-	Neg_a = count(x->x<-0,qFinder(A,a,T))
-	Neg_b = count(x->x<-0,qFinder(A,b,T))
+	qFind(lmb) = qFinder(A,lmb)[1]
+	Neg_a = count(x->x<-0,qFind(a))
+	Neg_b = count(x->x<-0,qFind(b))
 	
 	if Neg_a <= (i - 1) && Neg_b ≥ i
 		# Startgissning på a och b OK! Börja iteration
@@ -125,8 +127,8 @@ function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
 			display("Iterating")
-			q_a = qFinder(A,a)
-			q_b = qFinder(A,b)
+			q_a = qFind(a)
+			q_b = qFind(b)
 			Neg_a = count(x->x<=0,q_a)
 			Neg_b = count(x->x<=0,q_b)
 			qn_a = q_a[end]
@@ -137,7 +139,7 @@ function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
 				return [a, b]
 			else
 				c = (a+b)/2
-				Neg_c = count(x->x<-0,qFinder(A,c,T))
+				Neg_c = count(x->x<-0,qFind(c))
 
 				if Neg_c ≤ i-1
 					a = c
@@ -156,13 +158,13 @@ function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
 	end	
 end
 
-function qFinder(A,lmb,T=Float64)
+function qFinder(A,lmb)
 	# Finds vector of q_1(lmb),...,q_n(lmb) for a Hermitian 
 	# nxn Toeplitz matrix A
-
+	T = eltype(A)
 	n = size(A)[1]
 	
-	G,H,alpha = GHFinder(A,T) # G and H are matrix n x alpha
+	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
@@ -179,6 +181,7 @@ function qFinder(A,lmb,T=Float64)
 	v_prev = v_1
 	w_prev = w_1
 	f_prev = f_1
+	y_m = []
 
 	for m in range(2,n)
 		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
@@ -200,7 +203,7 @@ function qFinder(A,lmb,T=Float64)
 		end
 		f_prev = f_m
 	end
-	return qvector# Why can't return y_m
+	return qvector, y_m
 end
 
 function eigFinder(A,I = 0)
@@ -218,25 +221,27 @@ function eigFinder(A,I = 0)
 	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
 	a = -1 # Specific for Bi-Laplace
 	b = 17 # Specific for Bi-Laplace
+
+	T = eltype(A)
 	qFind(lmb) = qFinder(A,lmb)[1]
 	if I == 0
 		N = size(A)[1] 	# How many eigenvalues we look for. Here we assume that
-		E = zeros(N) 	# there are n eigenvalue for an nxn matrix (multiplicites?)
-		V = zeros(N,N)
+		E = zeros(T,N) 	# there are n eigenvalue for an nxn matrix (multiplicites?)
+		V = zeros(T,N,N)
 		for i in range(1,N)
 			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
 			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 			V[:,i] = qFinder(A,E[i])[2]
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
-		V = zeros(size(A)[1])
+		V = zeros(T,size(A)[1])
 		x = abFinder(a,b,I,A)
 		E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 		V =  qFinder(A,E)[2] 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
-		E = zeros(N)
-		V = zeros(size(A)[1],N)
+		E = zeros(T,N)
+		V = zeros(T,size(A)[1],N)
 		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
 			x = abFinder(a,b,k,A)
@@ -246,12 +251,12 @@ function eigFinder(A,I = 0)
 		end
 	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64} 	# We also allow
 		N = length(I)													# a range like
-		E = zeros(N)
-		V = zeros[size(A)[1],N]													# a:b
+		E = zeros(T,N)
+		V = zeros(T,size(A)[1],N)													# a:b
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
-			V[:,i] = qFinder(A,E[i])
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			V[:,i] = qFinder(A,E[i])[2]
 		end
 	else 
 		println("Illegal eigenvalue!")
