@@ -136,9 +136,9 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 
 	# Vill först kontrollera om Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i vilket är ett krav för
 	# att vi ska kunna hitta våra a och b
-
-	Neg_a = count(x->x<-0,qFinder(A,a))
-	Neg_b = count(x->x<-0,qFinder(A,b))
+	qFind(lmb) = qFinder(A,lmb)[1]
+	Neg_a = count(x->x<-0,qFind(a))
+	Neg_b = count(x->x<-0,qFind(b))
 	
 	if Neg_a <= (i - 1) && Neg_b ≥ i
 		# Startgissning på a och b OK! Börja iteration
@@ -146,8 +146,8 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			q_a = qFinder(A,a)
-			q_b = qFinder(A,b)
+			q_a = qFind(a)
+			q_b = qFind(b)
 			Neg_a = count(x->x<=0,q_a)
 			Neg_b = count(x->x<=0,q_b)
 			qn_a = q_a[end]
@@ -158,7 +158,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 				return [a, b]
 			else
 				c = (a+b)/2
-				Neg_c = count(x->x<-0,qFinder(A,c))
+				Neg_c = count(x->x<-0,qFind(c))
 
 				if Neg_c ≤ i-1
 					a = c
@@ -201,6 +201,7 @@ function qFinder(A,lmb)
 	w_prev = w_1
 	f_prev = f_1
 
+	y_m = []
 	for m in range(2,n)
 		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
@@ -221,7 +222,7 @@ function qFinder(A,lmb)
 		end
 		f_prev = f_m
 	end
-	return qvector# Why can't return y_m
+	return qvector, y_m
 end
 
 function eigFinder(A,I = 0)
@@ -239,37 +240,46 @@ function eigFinder(A,I = 0)
 	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
 	a = -1 # Specific for Bi-Laplace
 	b = 17 # Specific for Bi-Laplace
+	qFind(lmb) = qFinder(A,lmb)[1]
 	if I == 0
 		N = size(A)[1] 	# How many eigenvalues we look for. Here we assume that
-		E = zeros(N) 	# there are n eigenvalue for an nxn matrix (multiplicites?) 
+		E = zeros(N) 	# there are n eigenvalue for an nxn matrix (multiplicites?)
+		V = zeros(N,N)
 		for i in range(1,N)
 			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			V[:,i] = qFinder(A,E[i])[2]
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
+		V = zeros(size(A)[1])
 		x = abFinder(a,b,I,A)
-		E = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2])) 
+		E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+		V =  qFinder(A,E)[2] 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
 		E = zeros(N)
+		V = zeros(size(A)[1],N)
 		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
 			x = abFinder(a,b,k,A)
-			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			V[:,i] = qFinder(A,E[i])[2]
 			k += 1
 		end
 	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64} 	# We also allow
 		N = length(I)													# a range like
-		E = zeros(N)													# a:b
+		E = zeros(N)
+		V = zeros[size(A)[1],N]													# a:b
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
 			E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]))
+			V[:,i] = qFinder(A,E[i])
 		end
 	else 
 		println("Illegal eigenvalue!")
 		return 
 	end
-	return E
+	return E,V
 end
 
 function main(n)
