@@ -138,7 +138,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 				# Solution found
 				return [a, b]
 			else
-				c = (a+b)/2
+				c = (a+b)/convert(T,2)
 				Neg_c = count(x->x<-0,qFind(c))
 
 				if Neg_c ≤ i-1
@@ -219,10 +219,11 @@ function eigFinder(A,I = 0)
 
 	#a = eigmin(A) - 1  	# Starting guesses for interval that can be improved as to
 	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
-	a = -1 # Specific for Bi-Laplace
-	b = 17 # Specific for Bi-Laplace
-
 	T = eltype(A)
+	
+	a = convert(T,-1) # Specific for Bi-Laplace
+	b = convert(T,17) # Specific for Bi-Laplace
+
 	qFind(lmb) = qFinder(A,lmb)[1]
 	if I == 0
 		N = size(A)[1] 	# How many eigenvalues we look for. Here we assume that
@@ -250,9 +251,9 @@ function eigFinder(A,I = 0)
 			k += 1
 		end
 	elseif typeof(I) == Vector{Int64} || typeof(I) == UnitRange{Int64} 	# We also allow
-		N = length(I)													# a range like
+		N = length(I)													# a range like a:b
 		E = zeros(T,N)
-		V = zeros(T,size(A)[1],N)													# a:b
+		V = zeros(T,size(A)[1],N)													
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
 			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
