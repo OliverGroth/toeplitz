@@ -1,5 +1,5 @@
 using LinearAlgebra
-using GenericLinearAlgebra
+using GenericSVD
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
@@ -26,8 +26,10 @@ function matrixMaker(n,T=Float64) #Makes non-sparse nxn bi-Laplace
 end
 
 
-function GHFinder(A)
-	B = displacements(A)
+function GHFinder(A,T=Float64)
+	display("test1")
+	B = displacements(A,T)
+	display("test2")
 	S = svd(B)
 	X=S.U[:,1:2]
     D=diagm(S.S[1:2])
@@ -38,12 +40,13 @@ function GHFinder(A)
     		alpha += 1
     	end
     end
+    display(T)
     return X*D,Y',alpha #G,H,alpha
 end
 
-function displacements(A)
+function displacements(A,T=Float64)
 	n = size(A)[1]
-	Z = diagm(-1 => ones(n-1))
+	Z = diagm(-1 => ones(T,n-1))
 	return A*Z - Z*A
 end
 
@@ -102,7 +105,7 @@ function w(Ww_old,FF,H,Yy)
 end
 
 
-function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
+function abFinder(a,b,i,A,T=Float64) #(a,b) is starting guess for intervall
 	# abFinder måste använda qFinder som ska returnera lista {q_1(lambda), ..., {q_m(lambda)}
 	# Vi är nöjda med a och b när:
 	# Neg_n(a) = i - 1 och Neg_n(b) = i
@@ -111,9 +114,9 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 
 	# Vill först kontrollera om Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i vilket är ett krav för
 	# att vi ska kunna hitta våra a och b
-	qFind(lmb) = qFinder(A,lmb)[1]
-	Neg_a = count(x->x<-0,qFind(a))
-	Neg_b = count(x->x<-0,qFind(b))
+
+	Neg_a = count(x->x<-0,qFinder(A,a,T))
+	Neg_b = count(x->x<-0,qFinder(A,b,T))
 	
 	if Neg_a <= (i - 1) && Neg_b ≥ i
 		# Startgissning på a och b OK! Börja iteration
@@ -121,8 +124,9 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			q_a = qFind(a)
-			q_b = qFind(b)
+			display("Iterating")
+			q_a = qFinder(A,a)
+			q_b = qFinder(A,b)
 			Neg_a = count(x->x<=0,q_a)
 			Neg_b = count(x->x<=0,q_b)
 			qn_a = q_a[end]
@@ -133,7 +137,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 				return [a, b]
 			else
 				c = (a+b)/2
-				Neg_c = count(x->x<-0,qFind(c))
+				Neg_c = count(x->x<-0,qFinder(A,c,T))
 
 				if Neg_c ≤ i-1
 					a = c
@@ -152,31 +156,30 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 	end	
 end
 
-function qFinder(A,lmb)
+function qFinder(A,lmb,T=Float64)
 	# Finds vector of q_1(lmb),...,q_n(lmb) for a Hermitian 
 	# nxn Toeplitz matrix A
 
 	n = size(A)[1]
 	
-	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
+	G,H,alpha = GHFinder(A,T) # G and H are matrix n x alpha
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
 
-	f_1 = zeros(1,alpha)
+	f_1 = zeros(T,1,alpha)
 	for j in range(1,alpha)
 		f_1[1,j] = G[1,j] / q_1
 	end
 	#display(f_1)
 
-	qvector = zeros(n)
+	qvector = zeros(T,n)
 	qvector[1] = q_1 
 
 	v_prev = v_1
 	w_prev = w_1
 	f_prev = f_1
 
-	y_m = []
 	for m in range(2,n)
 		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
@@ -197,7 +200,7 @@ function qFinder(A,lmb)
 		end
 		f_prev = f_m
 	end
-	return qvector, y_m
+	return qvector# Why can't return y_m
 end
 
 function eigFinder(A,I = 0)
