@@ -1,4 +1,5 @@
 using LinearAlgebra
+using GenericLinearAlgebra
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
@@ -19,10 +20,10 @@ function banded(n) #To create banded matrix
     return A
 end
 
-function matrixMaker(n) #Makes non-sparse nxn bi-Laplace
-	return diagm(-2 => ones(n-2), -1 => -4*ones(n-1), 0 => 6*ones(n),
-		1 => -4*ones(n-1), 2 => ones(n-2))
-end 
+function matrixMaker(n,T=Float64) #Makes non-sparse nxn bi-Laplace
+	return diagm(-2 => ones(T,n-2), -1 => -4*ones(T,n-1), 0 => 6*ones(T,n),
+		1 => -4*ones(T,n-1), 2 => ones(T,n-2))
+end
 
 
 function GHFinder(A)
@@ -56,32 +57,6 @@ end
 function y(Ww)
 	# Uses Ww (w_{m-1} (a vector) to create y_m (a vector))
 	return [Ww;-1]
-end
-
-function Fbroke(F_old,G,vv,qq,yy)
-	# Uses F_old ((m-1) x alpha matrix), G ((m-1) x alpha matrix
-	# to extract g_{mj} as 
-	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
-	# and yy (vector y_m)
-	m = (size(F_old)[1]+1) 
-	alpha = size(F_old)[2]
-	Fm = zeros(m,alpha)
-	gg = G[end,1]
-	display(yy)
-	display(m)
-	Fm[:,1] = -gg*yy/qq
-	for j in range(2,alpha)
-		gg = G[end,j]
-		display([F_old[:,j];0])
-		display(vv'*F_old[:,j])
-		display(m)
-		if m-1 == 1
-			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - ((vv'*F_old[:,j-1])[1]))/qq
-		else
-			Fm[:,j] = [F_old[:,j-1];0] - yy*(gg - (vv'*F_old[:,j-1]))/qq
-		end
-	end
-	return Fm
 end
 
 function F(F_old,G,vv,qq,yy)
