@@ -1,4 +1,5 @@
 using LinearAlgebra
+using GenericLinearAlgebra
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
@@ -19,10 +20,10 @@ function banded(n) #To create banded matrix
     return A
 end
 
-function matrixMaker(n) #Makes non-sparse nxn bi-Laplace
-	return diagm(-2 => ones(n-2), -1 => -4*ones(n-1), 0 => 6*ones(n),
-		1 => -4*ones(n-1), 2 => ones(n-2))
-end 
+function matrixMaker(n,T=Float64) #Makes non-sparse nxn bi-Laplace
+	return diagm(-2 => ones(T,n-2), -1 => -4*ones(T,n-1), 0 => 6*ones(T,n),
+		1 => -4*ones(T,n-1), 2 => ones(T,n-2))
+end
 
 
 function GHFinder(A)
