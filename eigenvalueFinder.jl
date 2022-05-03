@@ -9,6 +9,7 @@ using Plots
 using Roots
 using BenchmarkTools
 using Profile
+using GenericSchur
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
@@ -40,6 +41,18 @@ function GHFinder(A)
     	end
     end
     return X*D,Y',alpha #G,H,alpha
+end
+
+function get_GH(n,vc)
+  T=eltype(vc)
+  nk=length(vc)
+  G=zeros(T,n,2)
+  G[1,1]=1
+  G[n-nk+2:n,2]=vc[nk:-1:2]
+  H=zeros(T,n,2)
+  H[1:nk-1,1]=vc[2:nk]
+  H[n,2]=-1
+  G,H
 end
 
 function displacements(A)
@@ -164,7 +177,11 @@ function qFinder(A,lmb)
 	T = eltype(A)
 	n = size(A)[1]
 	
-	G,H,alpha = GHFinder(A) # G and H are matrix n x alpha
+	#G,H,alpha = GHFinder(Float64.(A)) # G and H are matrix n x alpha
+	#G = convert.(T,G)
+	#H = convert.(T,H)
+	G,H = get_GH(n,[6,-4,1])
+	alpha = size(G)[2]
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
 	v_1 = A[1,2]
@@ -221,8 +238,8 @@ function eigFinder(A,I = 0)
 	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
 	T = eltype(A)
 	
-	a = convert(T,-1) # Specific for Bi-Laplace
-	b = convert(T,17) # Specific for Bi-Laplace
+	a = -1 # Specific for Bi-Laplace
+	b = 17 # Specific for Bi-Laplace
 
 	qFind(lmb) = qFinder(A,lmb)[1]
 	if I == 0
@@ -236,8 +253,8 @@ function eigFinder(A,I = 0)
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
 		V = zeros(T,size(A)[1])
-		x = abFinder(a,b,I,A)
-		E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+		x = abFinder(a,b,I,Float64.(A))
+		E = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
 		V =  qFinder(A,E)[2] 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
