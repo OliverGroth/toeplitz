@@ -30,7 +30,7 @@ end
 
 function GHFinder(A)
 	B = displacements(A)
-	S = svd(B)
+	S = GenericSVD.svd(B)
 	X=S.U[:,1:2]
     D=diagm(S.S[1:2])
     Y=S.Vt[1:2,:]
@@ -52,7 +52,10 @@ function get_GH(n,vc)
   H=zeros(T,n,2)
   H[1:nk-1,1]=vc[2:nk]
   H[n,2]=-1
-  G,H
+  if T == BigFloat
+  	return BigFloat.(G),BigFloat.(H)
+	end
+  return Float64.(G),Float64.(H)
 end
 
 function displacements(A)
@@ -79,9 +82,10 @@ function F(F_old,G,vv,qq,yy)
 	# to extract g_{mj} as 
 	# bottom value at column j), vv (vector v_{m-1}), qq (value q_m)
 	# and yy (vector y_m)
-	m = (size(F_old)[1]+1) 
+	T = eltype(G)
+	m = (size(F_old)[1]+1)
 	alpha = size(F_old)[2]
-	Fm = zeros(m,alpha)
+	Fm = zeros(T,m,alpha)
 	gg = G[end,1]
 	if m-1 == 1
 		Fm[:,1] = [F_old[:,1];0] - yy*(gg-(vv'*F_old[:,1])[1])/qq
@@ -127,8 +131,6 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 	# Vill först kontrollera om Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i vilket är ett krav för
 	# att vi ska kunna hitta våra a och b
 	T = eltype(A)
-	display(T)
-
 	qFind(lmb) = qFinder(A,lmb)[1]
 	Neg_a = count(x->x<-0,qFind(a))
 	Neg_b = count(x->x<-0,qFind(b))
@@ -139,7 +141,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			display("Iterating")
+			println("Iteration ",N)
 			q_a = qFind(a)
 			q_b = qFind(b)
 			Neg_a = count(x->x<=0,q_a)
@@ -180,7 +182,14 @@ function qFinder(A,lmb)
 	#G,H,alpha = GHFinder(Float64.(A)) # G and H are matrix n x alpha
 	#G = convert.(T,G)
 	#H = convert.(T,H)
-	G,H = get_GH(n,[6,-4,1])
+	if T == Float64
+		G,H = get_GH(n,Float64.([6,-4,1]))
+	elseif T == BigFloat
+		G,H = get_GH(n,BigFloat.([6,-4,1]))
+	else
+		diplay("Error")
+	end
+	#G,H = get_GH(n,[6,-4,1])
 	alpha = size(G)[2]
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
@@ -204,7 +213,8 @@ function qFinder(A,lmb)
 		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
 		H_m = H[1:m,:]
-
+		#display(eltype(G_m))
+		#display(eltype(H_m))
 
 		if m != n
 			v_m = A[1:m,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
@@ -248,7 +258,7 @@ function eigFinder(A,I = 0)
 		V = zeros(T,N,N)
 		for i in range(1,N)
 			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
-			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
 			V[:,i] = qFinder(A,E[i])[2]
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
@@ -263,7 +273,7 @@ function eigFinder(A,I = 0)
 		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
 			x = abFinder(a,b,k,A)
-			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
 			V[:,i] = qFinder(A,E[i])[2]
 			k += 1
 		end
@@ -273,7 +283,7 @@ function eigFinder(A,I = 0)
 		V = zeros(T,size(A)[1],N)													
 		for i in range(1,N)
 			x = abFinder(a,b,I[i],A)
-			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
 			V[:,i] = qFinder(A,E[i])[2]
 		end
 	else 
@@ -298,7 +308,3 @@ function main(n)
 	end
 	return E
 end
-
-
-
-
