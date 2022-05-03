@@ -10,9 +10,20 @@ using Roots
 using BenchmarkTools
 using Profile
 using GenericSchur
+using Polynomials
+using JLD2
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
+
+function toeplitz(n,vc)
+  T=eltype(vc)
+  Tn=BandedMatrix(0=>vc[1]*ones(T,n))
+  for kk=1:length(vc)-1
+    Tn=Tn+BandedMatrix(kk=>vc[kk+1]*ones(T,n-kk))
+  end
+  Symmetric(Tn)
+end
 
 function banded(n,T=Float64) #To create banded matrix
     e1 = ones(n-2)
@@ -108,14 +119,7 @@ end
 function w(Ww_old,FF,H,Yy)
 	# Uses Ww_old (vector w_{m-1}), FF (m x alpha matrix F),
 	# H (m x alpha matrix H_m) and Yy (vector y_m)
-	#println("FF*transpose(H)*Yy:")
-	#display(FF*transpose(H)*Yy)
-	#println("FF:")
-	#display(FF)
-	#println("transpose(H):")
-	#display(transpose(H))
-	#println("Yy")
-	#display(Yy)
+
 
 	return [0;Ww_old] - FF*transpose(H)*Yy
 end
@@ -179,9 +183,6 @@ function qFinder(A,lmb)
 	T = eltype(A)
 	n = size(A)[1]
 	
-	#G,H,alpha = GHFinder(Float64.(A)) # G and H are matrix n x alpha
-	#G = convert.(T,G)
-	#H = convert.(T,H)
 	if T == Float64
 		G,H = get_GH(n,Float64.([6,-4,1]))
 	elseif T == BigFloat
@@ -189,7 +190,6 @@ function qFinder(A,lmb)
 	else
 		diplay("Error")
 	end
-	#G,H = get_GH(n,[6,-4,1])
 	alpha = size(G)[2]
 	q_1 = A[1,1] - lmb
 	w_1 = A[1,2] / q_1
@@ -199,7 +199,6 @@ function qFinder(A,lmb)
 	for j in range(1,alpha)
 		f_1[1,j] = G[1,j] / q_1
 	end
-	#display(f_1)
 
 	qvector = zeros(T,n)
 	qvector[1] = q_1 
@@ -213,8 +212,6 @@ function qFinder(A,lmb)
 		A_m = A[1:m,1:m] # The A_n matrix cutting off all rows and columns at > m 
 		G_m = G[1:m,:] # dropping rows m+1 to n, g_j will be the jth column of G_m
 		H_m = H[1:m,:]
-		#display(eltype(G_m))
-		#display(eltype(H_m))
 
 		if m != n
 			v_m = A[1:m,m+1] # PROBLEM, Will run into problem at m = n since m + 1 will be too large, 
@@ -244,8 +241,6 @@ function eigFinder(A,I = 0)
 	# The algorithm calculates the ith smallest eigenvalue, thus I specifies
 	# which eigenvalue by index that is calculated.
 
-	#a = eigmin(A) - 1  	# Starting guesses for interval that can be improved as to
-	#b = eigmax(A) + 1  	# not use built in eigenvalue finder
 	T = eltype(A)
 	
 	a = -1 # Specific for Bi-Laplace
@@ -293,6 +288,96 @@ function eigFinder(A,I = 0)
 	return E,V
 end
 
+function cFinder(n1,alpha,vc,f)
+	# Will find C from E = H*C up to alpha order symbol, using a matrix A
+	# and its symbol f as a function, starting from n1.
+	T = eltype(vc)
+	E = zeros(T,alpha,n1) # Store "errors"
+	H = zeros(T,alpha,alpha) # Matrix for h values
+	h = zeros(T,alpha) # To store h for each iteration
+	j1 = 1:n1 # Index for gridpoints
+	t1 = convert.(T,j1)*convert(T,pi)/(convert(T,n1+1)) # Actual gridpoints
+	ft1 = f(t1) # Symbol evaluated in gridpoints
+	for k=1:alpha
+		nk = 2^(k-1)*(n1+1)-1
+		jk = 2^(k-1)*j1
+		h[k] = 1/(nk+1)
+		lmbs = eigvals(toeplitz(nk,vc))
+		E[k,:] = lmbs[jk] - ft1
+	end
+	for ii = 1:alpha, jj = 1:alpha
+		H[ii,jj] = h[ii]^jj
+	end
+	return H\E	
+end
+
+function compute_c(n1 :: Integer, alpha :: Integer, vc, f) 
+  
+  T=eltype(vc)
+  if T == Float64
+    datatype="Float64"
+  else
+    datatype="BigFloat$(precision(BigFloat))"
+  end
+  j1 = 1:n1
+  E  = zeros(T,alpha,n1)
+  hs = zeros(real(T),alpha)
+  t1 = LinRange(convert(T,pi)/(n1+1),convert(T,pi)*n1/(n1+1),n1)
+  ft1= f(t1)
+  for kk = 1:alpha
+    nk = 2^(kk-1)*(n1+1)-1
+    jk = 2^(kk-1)*j1
+    hs[kk] = convert(real(T),1)/(nk+1)
+    #filename = "eigs/eTn$(nk)$(datatype).jld2"
+    #if isfile(filename)
+    #  @load filename eTn
+    #else
+    #  eTn=eigvals(toeplitz(nk,vc))
+    #  @save filename eTn
+    #end
+    eTn=eigvals(toeplitz(nk,vc))
+    E[kk,:] = eTn[jk] - ft1
+  end
+  V = zeros(real(T),alpha,alpha)
+  for ii = 1:alpha, jj = 1:alpha
+    V[ii,jj] = hs[ii]^jj
+  end
+  return C=V\E 
+end
+
+function int_ext(nf,C,f)
+  T=eltype(C)
+  alpha=size(C,1)
+  beta = (alpha+2)*ones(Int64,alpha)
+  n1=size(C,2)
+  hf=convert(T,1)/(nf+1)
+  tf=(1:nf)*hf
+  lambdas=zeros(T,nf)
+  poly_evals = zeros(T,alpha+1)
+  for jj=1:nf
+    ell = tf[jj]*(n1+1)
+    poly_evals[1]=f(pi*tf[jj])
+    for kk = 1:alpha
+        m=min(max(floor(Int64,ell-beta[kk]/2),0),n1-beta[kk])
+        ii=m+1:m+beta[kk]
+        tt=convert.(T,ii)/(n1+1)
+        ff=fit(tt,C[kk,ii],beta[kk]-1)
+        poly_evals[kk+1]=ff(tf[jj])
+    end
+    hosymbol=Polynomial(poly_evals)
+    lambdas[jj] = hosymbol(hf)
+  end
+  return lambdas
+end
+
+function MLtest(n1,nf,alpha,T)
+	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
+	C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
+	E_ML = int_ext(nf,C,f)
+	E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
+	return E_ML,E_true
+end
+
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
 	A = matrixMaker(n)
@@ -302,7 +387,6 @@ function main(n)
 	X = zeros(2,n)
 	E = zeros(n)
 	for i in range(1,n)
-		#X[:,i] = abFinder(a-1,b+1,i,A)
 		x = abFinder(a-1,b+1,i,A)
 		E[i] = find_zero(lmb->qFinder(A,lmb)[end],(x[1],x[2]), Bisection())
 	end
