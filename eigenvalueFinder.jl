@@ -4,7 +4,7 @@ using GenericSVD
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
-using Arpack
+#using Arpack
 using Plots
 using Roots
 using BenchmarkTools
@@ -12,17 +12,18 @@ using Profile
 using GenericSchur
 using Polynomials
 using JLD2
+using DoubleFloats
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
 
 function toeplitz(n,vc)
-  T=eltype(vc)
-  Tn=BandedMatrix(0=>vc[1]*ones(T,n))
-  for kk=1:length(vc)-1
-    Tn=Tn+BandedMatrix(kk=>vc[kk+1]*ones(T,n-kk))
-  end
-  Symmetric(Tn)
+	T=eltype(vc)
+	Tn=BandedMatrix(0=>vc[1]*ones(T,n))
+	for kk=1:length(vc)-1
+		Tn=Tn+BandedMatrix(kk=>vc[kk+1]*ones(T,n-kk))
+	end
+	Symmetric(Tn)
 end
 
 function banded(n,T=Float64) #To create banded matrix
@@ -288,34 +289,13 @@ function eigFinder(A,I = 0)
 	return E,V
 end
 
-function cFinder(n1,alpha,vc,f)
-	# Will find C from E = H*C up to alpha order symbol, using a matrix A
-	# and its symbol f as a function, starting from n1.
-	T = eltype(vc)
-	E = zeros(T,alpha,n1) # Store "errors"
-	H = zeros(T,alpha,alpha) # Matrix for h values
-	h = zeros(T,alpha) # To store h for each iteration
-	j1 = 1:n1 # Index for gridpoints
-	t1 = convert.(T,j1)*convert(T,pi)/(convert(T,n1+1)) # Actual gridpoints
-	ft1 = f(t1) # Symbol evaluated in gridpoints
-	for k=1:alpha
-		nk = 2^(k-1)*(n1+1)-1
-		jk = 2^(k-1)*j1
-		h[k] = 1/(nk+1)
-		lmbs = eigvals(toeplitz(nk,vc))
-		E[k,:] = lmbs[jk] - ft1
-	end
-	for ii = 1:alpha, jj = 1:alpha
-		H[ii,jj] = h[ii]^jj
-	end
-	return H\E	
-end
-
 function compute_c(n1 :: Integer, alpha :: Integer, vc, f) 
   
   T=eltype(vc)
   if T == Float64
     datatype="Float64"
+  elseif T==Double64
+    datatype="Double64"
   else
     datatype="BigFloat$(precision(BigFloat))"
   end
@@ -328,13 +308,13 @@ function compute_c(n1 :: Integer, alpha :: Integer, vc, f)
     nk = 2^(kk-1)*(n1+1)-1
     jk = 2^(kk-1)*j1
     hs[kk] = convert(real(T),1)/(nk+1)
-    #filename = "eigs/eTn$(nk)$(datatype).jld2"
-    #if isfile(filename)
-    #  @load filename eTn
-    #else
-    #  eTn=eigvals(toeplitz(nk,vc))
-    #  @save filename eTn
-    #end
+    filename = "eigs/eTn$(nk)$(datatype).jld2"
+    #=if isfile(filename)
+      @load filename eTn
+    else
+      eTn=eigvals(toeplitz(nk,vc))
+      @save filename eTn
+    end=#
     eTn=eigvals(toeplitz(nk,vc))
     E[kk,:] = eTn[jk] - ft1
   end
@@ -345,7 +325,7 @@ function compute_c(n1 :: Integer, alpha :: Integer, vc, f)
   return C=V\E 
 end
 
-function int_ext(nf,C,f)
+function intext(nf,C,f)
   T=eltype(C)
   alpha=size(C,1)
   beta = (alpha+2)*ones(Int64,alpha)
@@ -367,15 +347,15 @@ function int_ext(nf,C,f)
     hosymbol=Polynomial(poly_evals)
     lambdas[jj] = hosymbol(hf)
   end
-  return lambdas
+  lambdas
 end
 
-function MLtest(n1,nf,alpha,T)
-	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
-	C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
-	E_ML = int_ext(nf,C,f)
-	E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
-	return E_ML,E_true
+function MLtest(n1,nf,alpha,T=Float64)
+    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
+    C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
+    E_ML = intext(nf,C,f)
+    E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
+    return E_ML,E_true
 end
 
 function main(n)
