@@ -4,32 +4,33 @@ using GenericSVD
 using SparseArrays
 using ToeplitzMatrices
 using BandedMatrices
-#using Arpack
+using Arpack
 using Plots
 using Roots
 using BenchmarkTools
 using Profile
-using GenericSchur
 using Polynomials
 using JLD2
 using DoubleFloats
+using Base.Threads
 # one big one small indicates vector
 # one/two small scalar (or small name (like lmb))
 # Function names are one letter to avoid confusion with variables
+#include("ML.jl")
 
 function toeplitz(n,vc)
-	T=eltype(vc)
-	Tn=BandedMatrix(0=>vc[1]*ones(T,n))
-	for kk=1:length(vc)-1
-		Tn=Tn+BandedMatrix(kk=>vc[kk+1]*ones(T,n-kk))
-	end
-	Symmetric(Tn)
+  T=eltype(vc)
+  Tn=BandedMatrix(0=>vc[1]*ones(T,n))
+  for kk=1:length(vc)-1
+    Tn=Tn+BandedMatrix(kk=>vc[kk+1]*ones(T,n-kk))
+  end
+  Symmetric(Tn)
 end
 
 function banded(n,T=Float64) #To create banded matrix
-    e1 = ones(n-2)
-    e4 = -4*ones(n-1)
-    e6 = 6*ones(n)
+    e1 = ones(T,n-2)
+    e4 = -4*ones(T,n-1)
+    e6 = 6*ones(T,n)
     A = BandedMatrix(-2 => e1, -1 => e4, 0 => e6, 1 => e4, 2 => e1) #Banded matrix with BigFloat
     return A
 end
@@ -253,14 +254,14 @@ function eigFinder(A,I = 0)
 		E = zeros(T,N) 	# there are n eigenvalue for an nxn matrix (multiplicites?)
 		V = zeros(T,N,N)
 		for i in range(1,N)
-			x = abFinder(a,b,i,A)	#Interval (alpha,beta) for iterate through
-			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
+			x = convert.(T,abFinder(a,b,i,A))	#Interval (alpha,beta) for iterate through
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 			V[:,i] = qFinder(A,E[i])[2]
 		end
 	elseif typeof(I) == Float64 || typeof(I) == Int64
 		V = zeros(T,size(A)[1])
-		x = abFinder(a,b,I,Float64.(A))
-		E = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
+		x = convert.(T,abFinder(a,b,I,Float64.(A)))
+		E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 		V =  qFinder(A,E)[2] 
 	elseif typeof(I) == Tuple{Int64,Int64}
 		N = I[2] - I[1] + 1
@@ -268,8 +269,8 @@ function eigFinder(A,I = 0)
 		V = zeros(T,size(A)[1],N)
 		k = I[1] # To keep track of eigenvalue we are on
 		for i in range(1,N)
-			x = abFinder(a,b,k,A)
-			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
+			x = convert.(T,abFinder(a,b,k,A))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 			V[:,i] = qFinder(A,E[i])[2]
 			k += 1
 		end
@@ -278,8 +279,8 @@ function eigFinder(A,I = 0)
 		E = zeros(T,N)
 		V = zeros(T,size(A)[1],N)													
 		for i in range(1,N)
-			x = abFinder(a,b,I[i],A)
-			E[i] = find_zero(lmb->qFind(lmb)[end],(BigFloat.(x[1]),BigFloat.(x[2])))
+			x = convert.(T,abFinder(a,b,I[i],A))
+			E[i] = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
 			V[:,i] = qFinder(A,E[i])[2]
 		end
 	else 
@@ -288,6 +289,15 @@ function eigFinder(A,I = 0)
 	end
 	return E,V
 end
+
+function MLtest(n1,nf,alpha,T=Float64)
+    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
+    C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
+    E_ML = intext(nf,C,f)
+    E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
+    return E_ML,E_true
+end
+
 
 function compute_c(n1 :: Integer, alpha :: Integer, vc, f) 
   
@@ -350,12 +360,25 @@ function intext(nf,C,f)
   lambdas
 end
 
-function MLtest(n1,nf,alpha,T=Float64)
-    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
-    C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
-    E_ML = intext(nf,C,f)
-    E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
-    return E_ML,E_true
+function startWithML(A,lmbs)
+	k = length(lmbs)
+	T = eltype(A)
+	V = zeros(T,size(A))
+	for i = 1:k 
+		V[:,i] = qFinder(A,lmbs[i])[2]
+	end
+	return V
+end
+
+function MLVApprox(n1,nf,alpha,vc,T=Float64)
+	vc = convert.(T,vc)
+	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
+	C = compute_c(n1,alpha,vc,f)
+	E_ML = intext(nf,C,f)
+	A = toeplitz(nf,vc)
+	V = startWithML(A,E_ML)
+	return V
+
 end
 
 function main(n)
