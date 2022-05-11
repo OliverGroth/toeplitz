@@ -371,7 +371,7 @@ function startWithML(A,lmbs)
 	k = length(lmbs)
 	T = eltype(A)
 	V = zeros(T,size(A))
-	for i = 1:k 
+	@threads for i = 1:k 
 		V[:,i] = qFinder(A,lmbs[i])[2]
 	end
 	return V
@@ -407,6 +407,17 @@ function eigBench(n,name,T=Float64)
 	A = matrixMaker(n,T)
 	b = @benchmark eigFinder($A)
 	@save name b
+end
+
+function eigvecML(n1,nf,alpha,vc,name,T=Float64)
+	VE = MLVApprox(n1,nf,alpha,vc,T)
+	@save name VE
+end
+
+function eigVBench(n1,nf,alpha,vc,name1,name2,T=Float64)
+	b = @benchmark eigvecML($n1,$nf,$alpha,$vc,$name2,$T)
+	@save name1 b
+
 end
 
 function main(n)
