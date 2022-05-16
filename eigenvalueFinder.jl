@@ -291,7 +291,7 @@ function eigFinder(A,I = 0)
 end
 
 function MLtest(n1,nf,alpha,T=Float64)
-    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
+    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
     C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
     E_ML = intext(nf,C,f)
     E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
@@ -378,8 +378,56 @@ function MLVApprox(n1,nf,alpha,vc,T=Float64)
 	A = toeplitz(nf,vc)
 	V = startWithML(A,E_ML)
 	return V
-
 end
+
+function abML(alpha,n1,n,i,T=Float64)
+	# i är index på egenvärdet som ska tas fram
+	# n är storleken på matrisen
+	# alpha är ordningen på symboler i ML
+
+	# Skapa ett intervall utifrån ML-uppskattning och skicka in i abFinder
+	# abFinder ska då bekräfta att intervallet uppfyller krav och rootFinder letar då egenvärde
+	A = matrixMaker(n,T)
+
+	# Hämta egenvärdet från ML
+
+	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
+  C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
+  E_ML = intext(n,C,f)
+  eig = E_ML[i]
+	marginal = 0.478*10^(-4) # interval marginal
+	eigreal = eigvals(A)[i]
+	error = eig-eigreal
+	print("Felet är:")
+	display(error)
+	#a = eig - marginal
+	#b = eig + marginal
+	#qFind(lmb) = qFinder(A,lmb)[1]
+	#display(A)
+
+	#x = convert.(T,abFinder(a,b,i,Float64.(A)))
+	#x = convert.(T,abFinder(-1,17,i,Float64.(A)))
+	#E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
+
+
+	return #E
+end
+# O(h^(1+alpha))
+# O((1/(n_f+1)^(1+alpha)))
+
+# For some reason different results when comparing [-1,17] with [eig+-marginal]
+
+# for marginal = 10^X , difference is =Y
+# 1 	2.664426838883127e-15
+# 0 	-1.2434389455584505e-14
+# -1  -6.217248937900877e-15
+# -2	0
+# -3 -6.217248937900877e-15
+# -4 -6.217248937900877e-15
+
+# Verkar inte finnas nå mönster iaf
+
+
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix
