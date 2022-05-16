@@ -147,7 +147,7 @@ function abFinder(a,b,i,A) #(a,b) is starting guess for intervall
 		maxiter = 10^6
 		# antag att för a och b så gäller Neg_n(a) ≤ i - 1 och Neg_n(b) ≥ i
 		while N <= maxiter
-			println("Iteration ",N)
+			#println("Iteration ",N)
 			q_a = qFind(a)
 			q_b = qFind(b)
 			Neg_a = count(x->x<=0,q_a)
@@ -298,7 +298,7 @@ function eigFinder(A,I = 0)
 end
 
 function MLtest(n1,nf,alpha,T=Float64)
-    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
+    @. f(t) = 6 - 8*cos(t) + 2*cos(2*t) 
     C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
     E_ML = intext(nf,C,f)
     E_true = eigvals(toeplitz(nf,convert.(T,[6.0,-4.0,1.0])))
@@ -371,7 +371,7 @@ function startWithML(A,lmbs)
 	k = length(lmbs)
 	T = eltype(A)
 	V = zeros(T,size(A))
-	for i = 1:k 
+	@threads for i = 1:k 
 		V[:,i] = qFinder(A,lmbs[i])[2]
 	end
 	return V
@@ -385,143 +385,6 @@ function MLVApprox(n1,nf,alpha,vc,T=Float64)
 	A = toeplitz(nf,vc)
 	V = startWithML(A,E_ML)
 	return V
-end
-
-function abML(alpha,n1,n,i,T=Float64)
-	# i är index på egenvärdet som ska tas fram
-	# n är storleken på matrisen
-	# alpha är ordningen på symboler i ML
-
-	# Skapa ett intervall utifrån ML-uppskattning och skicka in i abFinder
-	# abFinder ska då bekräfta att intervallet uppfyller krav och rootFinder letar då egenvärde
-	A = matrixMaker(n,T)
-
-	# Hämta egenvärdet från ML
-
-	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
-  C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
-  E_ML = intext(n,C,f)
-  eig = E_ML[i]
-	marginal = 0.478*10^(-4) # interval marginal
-	eigreal = eigvals(A)[i]
-	error = eig-eigreal
-	print("Felet är:")
-	display(error)
-	#a = eig - marginal
-	#b = eig + marginal
-	#qFind(lmb) = qFinder(A,lmb)[1]
-	#display(A)
-
-	#x = convert.(T,abFinder(a,b,i,Float64.(A)))
-	#x = convert.(T,abFinder(-1,17,i,Float64.(A)))
-	#E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
-
-	return #E
-end
-
-# O(h^(1+alpha))
-# O((1/(n_f+1)^(1+alpha)))
-
-# For some reason different results when comparing [-1,17] with [eig+-marginal]
-
-# for marginal = 10^X , difference is =Y
-# 1 	2.664426838883127e-15
-# 0 	-1.2434389455584505e-14
-# -1  -6.217248937900877e-15
-# -2	0
-# -3 -6.217248937900877e-15
-# -4 -6.217248937900877e-15
-
-# Verkar inte finnas nå mönster iaf
-
-
-# För experiment som är på papper:
-
-# errors:
-# 0.00014193963209060967
-# 4.318525317903443e-8
-# -4.202069053826918e-9
-
-# 7.472102744098506e-6
-# -2.945687602682332e-7
-# -2.9136589814568632e-9
-
-# 1.2959636260541313e-6
-# -1.8986124481564878e-7
-# 1.503029218813962e-8
-
-
-function abMLx(alpha,n1,n,i,T=Float64) # Same as abML but with intervals from Ordo of error, problem with determining the constant k
-	# i är index på egenvärdet som ska tas fram
-	# n är storleken på matrisen
-	# alpha är ordningen på symboler i ML
-
-	# Skapa ett intervall utifrån ML-uppskattning och skicka in i abFinder
-	# abFinder ska då bekräfta att intervallet uppfyller krav och rootFinder letar då egenvärde
-	A = matrixMaker(n,T)
-
-	# Hämta egenvärdet från ML
-
-	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
-  C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
-  E_ML = intext(n,C,f)
-  eig = E_ML[i]
-  k = 15000
-	marginal = k * (1/(n+1))^(alpha+1) # interval marginal
-	#eigreal = eigvals(A)[i]
-	#error = eig-eigreal
-	#print("Felet är:")
-	#display(error)
-	a = eig - marginal
-	b = eig + marginal
-	qFind(lmb) = qFinder(A,lmb)[1]
-	display(a)
-	display(b)
-
-	x = convert.(T,abFinder(a,b,i,Float64.(A)))
-	#x = convert.(T,abFinder(-1,17,i,Float64.(A)))
-	E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
-
-	return E
-end
-
-function abMLy(alpha,n1,n,i,T=Float64) # Same as abMLx but with intervals se new idea
-	# i är index på egenvärdet som ska tas fram
-	# n är storleken på matrisen
-	# alpha är ordningen på symboler i ML
-
-	# Skapa ett intervall utifrån ML-uppskattning och skicka in i abFinder
-	# abFinder ska då bekräfta att intervallet uppfyller krav och rootFinder letar då egenvärde
-	A = matrixMaker(n,T)
-
-	# Hämta egenvärdet från ML
-
-	@. f(t) = 6 - 8*cos(t) + 2*cos(2*t)
-  C = compute_c(n1,alpha,convert.(T,[6.0,-4.0,1.0]),f)
-  E_ML = intext(n,C,f)
-  eig = E_ML[i]
-  d_l = (E_ML[i-1] - eig) / 2
-  d_r = (E_ML[i+1] - eig) / 2
-
-  k = 15000
-
-	#eigreal = eigvals(A)[i]
-	#error = eig-eigreal
-	#print("Felet är:")
-	#display(error)
-	#a = eig + d_l
-	#b = eig + d_r
-	a = E_ML[i-1]
-	b = E_ML[i+1]
-	qFind(lmb) = qFinder(A,lmb)[1]
-	display(a)
-	display(b)
-
-	x = convert.(T,abFinder(a,b,i,Float64.(A)))
-	#x = convert.(T,abFinder(-1,17,i,Float64.(A)))
-	E = find_zero(lmb->qFind(lmb)[end],(x[1],x[2]))
-
-	return E
 end
 
 function eigFinderML(n1,nf,alpha,vc,T = Float64)
@@ -546,6 +409,16 @@ function eigBench(n,name,T=Float64)
 	@save name b
 end
 
+function eigvecML(n1,nf,alpha,vc,name,T=Float64)
+	VE = MLVApprox(n1,nf,alpha,vc,T)
+	@save name VE
+end
+
+function eigVBench(n1,nf,alpha,vc,name1,name2,T=Float64)
+	b = @benchmark eigvecML($n1,$nf,$alpha,$vc,$name2,$T)
+	@save name1 b
+
+end
 
 function main(n)
 # Runs the solver for the nxn bi-Laplace matrix

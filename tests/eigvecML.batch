@@ -1,0 +1,5 @@
+#!/bin/bash -l
+#SBATCH -A snic2021-22-760 
+#SBATCH -p core -n 20
+#SBATCH -t 10:00:00
+julia-1.7.2/bin/julia --threads 40 eigvecML.jl
